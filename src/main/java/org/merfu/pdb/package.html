@@ -1,0 +1,119 @@
+<html>
+<body>
+Pdb indexes data records in text files formatted as lines separated by LF/CR characters.
+<p>
+This package documentation walks through a simple example that indexes a database containing
+files of person records that are identified by last/first name and have address details data.
+
+<h2>The file and database format</h2>
+The persons data is in files with this format:
+<pre><code>
+H|...
+P|last_name>|first_name|...|other_indexable_fields|...
+A|city|street|number|...
+...
+T|...
+</code></pre>
+The lines starting with P are the header line records and contain the indexable fields
+The A lines are the record details lines and do not contain indexable fields.
+Both the header line and the details lines are returned in the client requests.
+<p>
+The files are organized in a directory structure:
+<pre><code>
+\root
+	\subdir1
+		\file1
+	\subdir2
+		\file1
+		\file2
+</code></pre>
+
+<h2>Implement the persons file format</h2>
+The person records start with a header line:
+<pre><code>
+public class PersonFileFormat extends StandardFileFormat {
+
+	&amp;Override
+	public boolean isRecordHeaderLine(String line) {
+	
+		return line.startsWith("P|");
+	}
+}
+</code></pre>
+
+<h2>Implement the person index and the file indexer</h2>
+Implement the KeyIndex interface for all key types other that String. For the String key type extend StringIndex.
+<p>
+All the files in the database are of the same format and should be indexed by this index:
+<pre><code>
+public class PersonIndex extends KeyIndex&lt;Person> {
+
+	&amp;Override
+	public String getName() {
+		return "person";
+	}
+
+	&amp;Override
+	public Person fromKeyString(String keyString) {
+		String fields[] = keyString.split("\\|");
+		return new Person(fields[1], fields[0]);
+	}
+
+	&amp;Override
+	public boolean canIndex(Path relativePath, boolean isDirectory) {
+		return true;
+	}
+
+	&amp;Override
+	public KeyIndexer&lt;Person> getKeyIndexer(Path relativePath) {
+		
+		return new PersonIndexer();
+	}
+}
+</code></pre>
+
+Implement KeyIndexer to define indexers for key types other than String. For the String key type extend StringIndexer:
+<pre><code>
+public class PersonIndexer implements KeyIndexer&lt;Person> {
+
+	&amp;Override
+	public String keyStringFromLine(String line) {
+
+		String fields[] = line.split("\\|");
+
+		return Stream.of(fields[1], fields[2]).collect(Collectors.joining("|"));
+	}
+
+	&amp;Override
+	public FileFormat getFileFormat() {
+		return new PersonFileFormat();
+	}
+}
+</code></pre>
+
+<h2>Create and populate the database</h2>
+Always get the database in try-with-resources:
+<pre><code>
+		Pdb pdb = new Pdb(Path.of("/pdb"), new KeyIndex&lt;?>[] {new PersonIndex()});
+		
+		pdb.createDatabase("main");
+		
+		Transaction transaction;
+		try(Database database = pdb.getDatabase("main")) {
+			transaction = database.beginTransaction();
+		}
+
+		transaction.copyDir(Path.of("/local/fs/data"), null, false);
+		transaction.commit();
+</code></pre>
+
+<h2>Query the database</h2>
+<pre><code>
+		try(Database database = pdb.getDatabase("main")) {
+			Stream&lt;MatchedRecord&lt;Person>> persons = database.lookup("person", Arrays.asList(new Person("LastName", "FirstName")));
+			persons.forEach(person -> System.out.print(person.getRecord()));
+		}
+</code></pre>
+
+</body>
+</html>
