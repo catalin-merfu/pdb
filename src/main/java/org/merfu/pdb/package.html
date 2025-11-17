@@ -1,12 +1,12 @@
 <html>
 <body>
-Pdb indexes data records in text files formatted as lines separated by LF/CR characters.
+Pdb is a Java library that indexes data records in text files formatted in lines separated by LF/CR characters.
 <p>
-This package documentation walks through a simple example that indexes a database containing
-files of person records that are identified by last/first name and have address details data.
+This package documentation walks through an example that indexes a database containing
+files of person records that are identified by last and first name and contain address details data.
 
-<h2>The file and database format</h2>
-The persons data is in files with this format:
+<h2>The data files and the directory structure</h2>
+The persons data is contained in files with this format:
 <pre><code>
 H|...
 P|last_name>|first_name|...|other_indexable_fields|...
@@ -16,7 +16,7 @@ T|...
 </code></pre>
 The lines starting with P are the header line records and contain the indexable fields
 The A lines are the record details lines and do not contain indexable fields.
-Both the header line and the details lines are returned in the client requests.
+Both the header line and the details lines are returned in the client responses.
 <p>
 The files are organized in a directory structure:
 <pre><code>
@@ -41,7 +41,7 @@ public class PersonFileFormat extends StandardFileFormat {
 }
 </code></pre>
 
-<h2>Implement the person index and the file indexer</h2>
+<h2>Implement the person name index and the persons file indexer</h2>
 Implement the KeyIndex interface for all key types other that String. For the String key type extend StringIndex.
 <p>
 All the files in the database are of the same format and should be indexed by this index:
